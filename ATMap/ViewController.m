@@ -18,8 +18,8 @@
     [super viewDidLoad];
     // Do any additional setup after loading the view, typically from a nib.
     
-    UILongPressGestureRecognizer *longPressOnMap = [[UILongPressGestureRecognizer alloc]initWithTarget:self action:@selector(handleLongPressOnMap)];
-    
+    UILongPressGestureRecognizer *longPressOnMap = [[UILongPressGestureRecognizer alloc]initWithTarget:self action:@selector(handleLongPressOnMap:)];
+    longPressOnMap.minimumPressDuration = 2.0;
 
     [self.mapView addGestureRecognizer:longPressOnMap];
     
@@ -34,8 +34,46 @@
     // Dispose of any resources that can be recreated.
 }
 
--(void)handleLongPressOnMap {
+-(void)handleLongPressOnMap:(UIGestureRecognizer *)gesture {
+    
+    
+    
     NSLog(@"Long Pressed on Map");
+    
+    if (gesture.state == UIGestureRecognizerStateBegan) {
+        
+        CGPoint touchPoint = [gesture locationInView:self.mapView];
+        
+        CLLocationCoordinate2D newCoordinate = [self.mapView convertPoint:touchPoint toCoordinateFromView:gesture.view];
+        
+        MKPointAnnotation *annotation = [[MKPointAnnotation alloc]init];
+        
+        annotation.coordinate = newCoordinate;
+        
+        CLGeocoder *geoCoder = [[CLGeocoder alloc]init];
+        CLLocation *newLocation = [[CLLocation alloc]initWithLatitude:newCoordinate.latitude longitude:newCoordinate.longitude];
+        [geoCoder reverseGeocodeLocation:newLocation completionHandler:^(NSArray<CLPlacemark *> * _Nullable placemarks, NSError * _Nullable error) {
+            if (error != nil) {
+                NSLog(@"%@",error.localizedDescription);
+                return;
+            }
+            
+            if (placemarks.count > 0) {
+                CLPlacemark *placemark = placemarks.firstObject;
+                annotation.title = [placemark.thoroughfare stringByAppendingString:[NSString stringWithFormat:@", %@",placemark.subThoroughfare]];
+                annotation.subtitle = placemark.locality;
+                [self.mapView addAnnotation:annotation];
+                
+            }
+            else {
+                annotation.title = @"Unknown Place";
+                [self.mapView addAnnotation:annotation];
+                NSLog(@"Problem with the data received from geocoder");
+            }
+        }];
+        
+    }
+    
 }
 
 - (IBAction)mapTypeAction:(id)sender {
